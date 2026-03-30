@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise audience | Digital tonal spectrum | University of Southampton</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #F5F5F5;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        #root {
+            width: 100%;
+            min-height: 100vh;
+        }
+        /* Ensure SVG scales properly */
+        .spectrum-svg-container {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* Touch-friendly interactive elements */
+        @media (hover: none) and (pointer: coarse) {
+            .interactive-circle {
+                r: 8 !important;
+            }
+        }
+        /* Font scaling for narrower viewports - maintains legibility without over-optimizing */
+        @media (max-width: 768px) {
+            #enterprise-spectrum-svg text {
+                font-size: 140%;
+            }
+            #enterprise-spectrum-svg .stage-label {
+                font-size: 160%;
+            }
+            #enterprise-spectrum-svg .stage-question,
+            #enterprise-spectrum-svg .stage-indicator {
+                font-size: 140%;
+            }
+        }
+        @media (max-width: 480px) {
+            #enterprise-spectrum-svg text {
+                font-size: 180%;
+            }
+            #enterprise-spectrum-svg .stage-label {
+                font-size: 200%;
+            }
+            #enterprise-spectrum-svg .stage-question,
+            #enterprise-spectrum-svg .stage-indicator {
+                font-size: 180%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+        
+        const EnterpriseTonalSpectrum = () => {
+          const [activeStage, setActiveStage] = useState(null);
+          const [activeTone, setActiveTone] = useState(null);
+          const [showHighRisk, setShowHighRisk] = useState(false);
+
+          // Tonal values (same as other spectra for consistency)
+          const tonalValues = [
+            { name: 'Engaging and creative', color: '#EA42CB', shortName: 'Creative' },
+            { name: 'Boldly optimistic', color: '#FCBC00', shortName: 'Optimistic' },
+            { name: 'Human and grounded', color: '#0C838C', shortName: 'Grounded' },
+            { name: 'Collectively driven', color: '#0C8C41', shortName: 'Collective' },
+            { name: 'Purposefully practical', color: '#002F4C', shortName: 'Practical' }
+          ];
+
+          // 4-stage compressed spectrum (intentionally flat profile)
+          const stages = [
+            {
+              name: 'Relevance',
+              question: 'Is this for us?',
+              description: 'Speed of understanding, clear positioning, no fluff',
+              bands: [2, 3, 8, 5, 85]
+            },
+            {
+              name: 'Credibility',
+              question: 'Do they know what they\'re doing?',
+              description: 'Show proof, not promise—metrics, case studies, governance',
+              isMakeOrBreak: true,
+              bands: [1, 2, 5, 8, 92]
+            },
+            {
+              name: 'Value alignment',
+              question: 'Do our priorities match?',
+              description: 'Working with partners, shared priorities, long-term collaboration',
+              bands: [2, 3, 6, 6, 88]
+            },
+            {
+              name: 'Commitment',
+              question: 'Can we proceed safely?',
+              description: 'Contracts, contacts, next steps—pure transactional clarity',
+              bands: [0, 0, 3, 5, 98]
+            }
+          ];
+
+          // High-risk adjustments: compresses spectrum, eliminates expressive tones
+          const getAdjustedBands = (stageIndex, bands) => {
+            if (!showHighRisk) return bands;
+
+            const highRiskAdjustments = [
+              [0, 1, 4, 3, 95],
+              [0, 0, 2, 5, 98],
+              [0, 1, 3, 4, 95],
+              [0, 0, 1, 3, 100]
+            ];
+
+            return highRiskAdjustments[stageIndex];
+          };
+
+          // SVG dimensions (these remain constant for calculations, viewBox handles scaling)
+          const width = 1400;
+          const height = 700;
+          const margin = { top: 80, right: 200, bottom: 100, left: 200 };
+          const chartWidth = width - margin.left - margin.right;
+          const chartHeight = height - margin.top - margin.bottom;
+          
+          const stageWidth = chartWidth / stages.length;
+
+          // Create smooth curves for bands
+          const createBandPath = (toneIndex) => {
+            const points = stages.map((stage, i) => {
+              const adjustedBands = getAdjustedBands(i, stage.bands);
+              const x = margin.left + (i * stageWidth) + (stageWidth / 2);
+              const y = margin.top + chartHeight - (adjustedBands[toneIndex] / 100 * chartHeight);
+              return { x, y, value: adjustedBands[toneIndex] };
+            });
+
+            let path = `M ${points[0].x} ${points[0].y}`;
+            
+            for (let i = 1; i < points.length; i++) {
+              const prev = points[i - 1];
+              const curr = points[i];
+              const cpX = (prev.x + curr.x) / 2;
+              
+              path += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
+            }
+            
+            return { path, points };
+          };
+
+                    const toneGeoms = tonalValues.map((tone, toneIndex) => ({ tone, toneIndex, ...createBandPath(toneIndex) }));
+
+const exportToSVG = () => {
+            const svgElement = document.getElementById('enterprise-spectrum-svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'enterprise-tonal-spectrum.svg';
+            link.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const exportToPNG = () => {
+            const svgElement = document.getElementById('enterprise-spectrum-svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            
+            img.onload = () => {
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              
+              canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'enterprise-tonal-spectrum.png';
+                link.click();
+                URL.revokeObjectURL(url);
+              });
+            };
+            
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const svgUrl = URL.createObjectURL(svgBlob);
+            img.src = svgUrl;
+          };
+
+          return (
+            <div className="w-full mx-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+              <div className="mb-4 sm:mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Enterprise tonal spectrum
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
+                  A compressed 4-stage journey for enterprise audiences evaluating risk, relevance, and credibility
+                </p>
+                
+                {/* Controls */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 items-start sm:items-center flex-wrap">
+                  <button
+                    onClick={() => setShowHighRisk(!showHighRisk)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
+                      showHighRisk 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    High-risk context
+                  </button>
+                  
+                  <div className="text-xs sm:text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded border border-blue-200">
+                    ℹ International context is built into baseline
+                  </div>
+                  
+                  <div className="flex gap-2 ml-0 sm:ml-auto">
+                    <button
+                      onClick={exportToSVG}
+                      className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                    >
+                      Export SVG
+                    </button>
+                    <button
+                      onClick={exportToPNG}
+                      className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                    >
+                      Export PNG
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SVG Chart with responsive viewBox */}
+              <svg
+                id="enterprise-spectrum-svg"
+                viewBox={`0 0 ${width} ${height}`}
+                className="spectrum-svg-container w-full h-auto bg-white rounded-lg shadow-lg"
+                preserveAspectRatio="xMidYMid meet"
+               onPointerLeave={() => { setActiveStage(null); setActiveTone(null); }}>
+                <defs>
+                  {tonalValues.map((tone, i) => (
+                    <linearGradient
+                      key={`gradient-${i}`}
+                      id={`gradient-${i}`}
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
+                      <stop offset="0%" stopColor={tone.color} stopOpacity="0.3" />
+                      <stop offset="50%" stopColor={tone.color} stopOpacity="0.6" />
+                      <stop offset="100%" stopColor={tone.color} stopOpacity="0.3" />
+                    </linearGradient>
+                  ))}
+                  
+                  {showHighRisk && (
+                    <pattern
+                      id="high-risk-pattern"
+                      patternUnits="userSpaceOnUse"
+                      width="8"
+                      height="8"
+                    >
+                      <rect width="8" height="8" fill="rgba(220, 38, 38, 0.05)" />
+                      <line x1="0" y1="0" x2="8" y2="8" stroke="#DC2626" strokeWidth="0.5" opacity="0.3" />
+                    </pattern>
+                  )}
+                </defs>
+
+                {/* Y-axis: band strength (%) */}
+                {(() => {
+                  const ticks = [0, 20, 40, 60, 80, 100];
+                  return (
+                    <g>
+                      {/* Axis line */}
+                      <line
+                        x1={margin.left}
+                        y1={margin.top}
+                        x2={margin.left}
+                        y2={margin.top + chartHeight}
+                        stroke="#E1E8EC"
+                        strokeWidth="2"
+                      />
+
+                      {/* Grid lines + tick labels */}
+                      {ticks.map((t) => {
+                        const y = margin.top + chartHeight - (t / 100) * chartHeight;
+                        return (
+                          <g key={`y-tick-${t}`}>
+                            <line
+                              x1={margin.left}
+                              y1={y}
+                              x2={margin.left + chartWidth}
+                              y2={y}
+                              stroke="#E1E8EC"
+                              strokeWidth="1"
+                              opacity="0.7"
+                            />
+                            <line
+                              x1={margin.left - 6}
+                              y1={y}
+                              x2={margin.left}
+                              y2={y}
+                              stroke="#A7B4BC"
+                              strokeWidth="2"
+                            />
+                            <text
+                              x={margin.left - 12}
+                              y={y + 4}
+                              textAnchor="end"
+                              fontSize="12"
+                              fill="#495961"
+                            >
+                              {t}%
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      <text
+                        x={margin.left - 12}
+                        y={margin.top - 16}
+                        textAnchor="end"
+                        fontSize="12"
+                        fill="#00131D"
+                        fontWeight="600"
+                      >
+                        Band strength
+                      </text>
+                    </g>
+                  );
+                })()}{/* Stage labels and grid lines */}
+                {stages.map((stage, i) => {
+                  const x = margin.left + (i * stageWidth) + (stageWidth / 2);
+                  const isMakeOrBreak = stage.isMakeOrBreak;
+                  
+                  return (
+                    <g key={`x-label-${i}`}>
+                      <text
+                        className="stage-label"
+                        x={x}
+                        y={height - margin.bottom + 25}
+                        textAnchor="middle"
+                        fontSize="14"
+                        fill={isMakeOrBreak ? '#DC2626' : '#00131D'}
+                        fontWeight="700"
+                      >
+                        {stage.name}
+                      </text>
+                      <text
+                        className="stage-question"
+                        x={x}
+                        y={height - margin.bottom + 45}
+                        textAnchor="middle"
+                        fontSize="11"
+                        fill="#495961"
+                        fontStyle="italic"
+                      >
+                        {stage.question}
+                      </text>
+                      
+                      {isMakeOrBreak && (
+                        <text
+                          className="stage-indicator"
+                          x={x}
+                          y={height - margin.bottom + 65}
+                          textAnchor="middle"
+                          fontSize="10"
+                          fill="#DC2626"
+                          fontWeight="600"
+                        >
+                          Make-or-break stage
+                        </text>
+                      )}
+                      
+                      <line
+                        x1={x}
+                        y1={margin.top}
+                        x2={x}
+                        y2={margin.top + chartHeight}
+                        stroke={isMakeOrBreak ? '#DC2626' : '#E1E8EC'}
+                        strokeWidth={isMakeOrBreak ? '2' : '1'}
+                        strokeDasharray={isMakeOrBreak ? '' : '4 4'}
+                        opacity={isMakeOrBreak ? '0.6' : '0.5'}
+                      />
+                    </g>
+                  );
+                })}
+
+                {/* High-risk overlay */}
+                {showHighRisk && (
+                  <rect
+                    x={margin.left}
+                    y={margin.top}
+                    width={chartWidth}
+                    height={chartHeight}
+                    fill="url(#high-risk-pattern)"
+                    opacity="0.8"
+                  />
+                )}
+
+                {/* Tonal bands */}
+                {[...toneGeoms].reverse().map((geom) => {
+                  const { tone, toneIndex, path, points } = geom;
+                  
+                  return (
+                    <g key={`band-${toneIndex}`}>
+                      <path
+                        d={`${path} L ${margin.left + chartWidth} ${margin.top + chartHeight} L ${margin.left} ${margin.top + chartHeight} Z`}
+                        fill={`url(#gradient-${toneIndex})`}
+                        opacity={0.7}
+                        className="transition-all duration-300"
+                      />
+                      
+                      <path
+                        d={path}
+                        fill="none"
+                        stroke={tone.color}
+                        strokeWidth="2.5"
+                        className="transition-all duration-300"
+                      />
+                      
+                      {points.map((point, i) => (
+                        <circle
+                          key={`point-${toneIndex}-${i}`}
+                          className="interactive-circle transition-all duration-200"
+                          cx={point.x}
+                          cy={point.y}
+                          r={activeStage === i ? "8" : "5"}
+                          fill={tone.color}
+                          stroke="white"
+                          strokeWidth="2"
+                          opacity={activeStage === i ? 1 : 0.8}
+                          style={{ pointerEvents: "none" }}
+                        />
+                      ))}
+                    </g>
+                  );
+                })}
+
+                {/* Legend */}
+                {(() => {
+                  const legendX = width - margin.right + 20;
+                  const legendY = margin.top + 80;
+
+                  const title = "Tonal values";
+                  const swatchW = 20;
+                  const swatchH = 12;
+                  const textX = 28;
+
+                  // Wrapping & spacing (SVG <text> does not wrap automatically)
+                  const maxChars = 22;   // wrap threshold (character-based)
+                  const lineH = 14;      // per-line spacing
+                  const itemGap = 10;    // gap between items
+                  const titleGap = 25;   // gap after title
+
+                  // Container tokens (confirmed)
+                  const panelW = 180;
+
+                  const wrapLines = (s) => {
+                    const words = String(s).split(/\s+/).filter(Boolean);
+                    const lines = [];
+                    let cur = "";
+                    for (const w of words) {
+                      const next = cur ? `${cur} ${w}` : w;
+                      if (next.length <= maxChars) cur = next;
+                      else {
+                        if (cur) lines.push(cur);
+                        cur = w;
+                      }
+                    }
+                    if (cur) lines.push(cur);
+                    return lines.length ? lines : [String(s)];
+                  };
+
+                  const items = tonalValues.map((tone) => ({ tone, lines: wrapLines(tone.name) }));
+
+                  // Dynamic panel height
+                  const padTop = 25;   // achieved via rect y=-25
+                  const padBottom = -5;
+                  const itemsHeight = items.reduce((acc, it) => acc + (it.lines.length * lineH) + itemGap, 0);
+                  const panelH = padTop + 12 + titleGap + itemsHeight + padBottom;
+
+                  let yCursor = 0;
+
+                  return (
+                    <g transform={`translate(${legendX}, ${legendY})`}>
+                      <rect
+                        x="-10"
+                        y="-25"
+                        width={panelW}
+                        height={panelH}
+                        fill="white"
+                        stroke="#E1E8EC"
+                        strokeWidth="2"
+                        rx="6"
+                      />
+                      <text fontSize="12" fontWeight="600" fill="#00131D" y="0">
+                        {title}
+                      </text>
+
+                      {items.map((it, i) => {
+                        const yTop = titleGap + yCursor;
+                        const blockH = it.lines.length * lineH;
+                        yCursor += blockH + itemGap;
+
+                        return (
+                          <g key={`legend-${i}`} transform={`translate(0, ${yTop})`}>
+                            <rect x="0" y="-10" width={swatchW} height={swatchH} fill={it.tone.color} opacity="0.7" />
+                            <text x={textX} y="0" fontSize="11" fill="#495961">
+                              {it.lines.map((ln, li) => (
+                                <tspan key={`ln-${li}`} x={textX} dy={li === 0 ? 0 : lineH}>
+                                  {ln}
+                                </tspan>
+                              ))}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })()}
+
+
+                {/* Hit targets layer (renders above all bands to prevent overlap issues) */}
+                <g className="hit-target-layer">
+                  {toneGeoms.flatMap(({ toneIndex, points }) =>
+                    points.map((point, stageIndex) => {
+                      // Detect near-overlaps at this stage so each point remains targetable
+                      const colliders = toneGeoms
+                        .map(g => ({ toneIndex: g.toneIndex, p: g.points[stageIndex] }))
+                        .filter(o => Math.hypot(o.p.x - point.x, o.p.y - point.y) < 1.5)
+                        .sort((a, b) => a.toneIndex - b.toneIndex);
+
+                      const pos = colliders.findIndex(c => c.toneIndex === toneIndex);
+                      const count = colliders.length;
+                      const jitter = count > 1 ? (pos - (count - 1) / 2) * 5 : 0;
+
+                      return (
+                        <circle
+                          key={`hit-${toneIndex}-${stageIndex}`}
+                          cx={point.x + jitter}
+                          cy={point.y}
+                          r="12"
+                          fill="transparent"
+                          style={{ cursor: "pointer", pointerEvents: "all" }}
+                          onPointerEnter={() => { setActiveStage(stageIndex); setActiveTone(toneIndex); }}
+                          onPointerDown={() => { setActiveStage(stageIndex); setActiveTone(toneIndex); }}
+                        />
+                      );
+                    })
+                  )}
+                </g>
+
+                {/* Interactive detail panel */}
+                {activeStage !== null && (() => {
+                  const isMOB = !!stages[activeStage].isMakeOrBreak;
+                  const hasSelected = activeTone !== null;
+
+                  // Baseline line positions (kept in sync with existing typography)
+                  const titleY = 10;
+                  const mobY = 28;
+                  const questionY = isMOB ? 48 : 30;
+                  const selectedY = isMOB ? 64 : 46;
+
+                  // Spacing controls (single source of truth)
+                  const gapAfterQuestion = 14;     // gap between question and Band strengths if no selected point
+                  const gapAfterSelected = 25;     // gap between selected point and Band strengths
+                  const gapAfterHeading = 16;      // gap between heading and list
+
+                  const headingY = (hasSelected ? selectedY : questionY) + (hasSelected ? gapAfterSelected : gapAfterQuestion);
+                  const listStartY = headingY + gapAfterHeading;
+
+                  // List geometry
+                  const rows = tonalValues.length;
+                  const rowStep = 15;
+
+                  // Panel sizing
+                  const topPadding = 14;
+                  const bottomPadding = 16;
+                  const lastRowBaselineY = listStartY + ((rows - 1) * rowStep);
+                  const panelHeight = lastRowBaselineY + bottomPadding + topPadding;
+
+                  return (
+                    <g transform={`translate(${width - margin.right + 20}, ${margin.top + 260})`}>
+                      <rect
+                        x="-10"
+                        y="-10"
+                        width="180"
+                        height={panelHeight}
+                        fill="white"
+                        stroke="#E1E8EC"
+                        strokeWidth="2"
+                        rx="4"
+                      />
+                      <text fontSize="13" fontWeight="600" fill="#00131D" y={titleY}>
+                        {stages[activeStage].name}
+                      </text>
+
+                      {isMOB && (
+                        <text fontSize="10" fill="#DC2626" y={mobY} fontWeight="600">
+                          ⚠ Make-or-break stage
+                        </text>
+                      )}
+
+                      <text
+                        fontSize="11"
+                        fill="#495961"
+                        y={questionY}
+                        fontStyle="italic"
+                      >
+                        {stages[activeStage].question}
+                      </text>
+
+                      {hasSelected && (
+                        <text fontSize="10" fill="#00131D" y={selectedY}>
+                          Selected point: {tonalValues[activeTone].shortName} ({Math.round(getAdjustedBands(activeStage, stages[activeStage].bands)[activeTone])}%)
+                        </text>
+                      )}
+
+                      <text fontSize="11" fontWeight="600" fill="#00131D" y={headingY}>
+                        Band strengths:
+                      </text>
+
+                      {tonalValues.map((tone, i) => {
+                        const adjustedBands = getAdjustedBands(activeStage, stages[activeStage].bands);
+                        return (
+                          <g key={`detail-${i}`} transform={`translate(0, ${listStartY + (i * rowStep)})`}>
+                            <rect x="0" y="-8" width="8" height="8" fill={tone.color} />
+                            <text x="15" y="0" fontSize="10" fill="#495961">
+                              {tone.shortName}: {Math.round(adjustedBands[i])}%
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })()}
+              </svg>
+
+              {/* Key insights */}
+              <div className="mt-4 sm:mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                <div className="bg-slate-50 border-l-4 border-slate-600 p-3 sm:p-4 rounded">
+                  <h3 className="text-xs sm:text-sm font-semibold text-slate-900 mb-2">Intentionally boring</h3>
+                  <p className="text-xs sm:text-sm text-slate-700">
+                    Enterprise audiences evaluate risk under time pressure. A flat, stable spectrum
+                    signals reliability and clarity. If someone says "this looks boring"—that's correct.
+                  </p>
+                </div>
+                
+                <div className="bg-red-50 border-l-4 border-red-600 p-3 sm:p-4 rounded">
+                  <h3 className="text-xs sm:text-sm font-semibold text-red-900 mb-2">Credibility is make-or-break</h3>
+                  <p className="text-xs sm:text-sm text-red-800">
+                    The second stage is where trust is established or lost. Practical clarity peaks here,
+                    and any hint of promotional tone can derail the entire relationship.
+                  </p>
+                </div>
+                
+                <div className="bg-amber-50 border-l-4 border-amber-600 p-3 sm:p-4 rounded">
+                  <h3 className="text-xs sm:text-sm font-semibold text-amber-900 mb-2">Commitment: zero expression</h3>
+                  <p className="text-xs sm:text-sm text-amber-800">
+                    At commitment, practical tone reaches 98-100%. Creative and optimistic tones disappear entirely.
+                    This is pure transactional clarity—contracts, contacts, next steps.
+                  </p>
+                </div>
+                
+                <div className="bg-blue-50 border-l-4 border-blue-600 p-3 sm:p-4 rounded">
+                  <h3 className="text-xs sm:text-sm font-semibold text-blue-900 mb-2">International by default</h3>
+                  <p className="text-xs sm:text-sm text-blue-800">
+                    Enterprise interactions often cross borders and involve non-native English readers.
+                    International context is baked into the baseline—not shown as an overlay.
+                  </p>
+                </div>
+              </div>
+
+              {/* System comparison */}
+              <div className="mt-4 sm:mt-6 bg-gray-50 border border-gray-300 rounded-lg p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">How this differs from UG/PG spectra</h3>
+                <div className="space-y-3 text-xs sm:text-sm text-gray-700">
+                  <p>
+                    <strong>Compressed journey:</strong> Only 4 stages vs. 7 for UG/PG. Enterprise decisions
+                    move faster with less emotional variation.
+                  </p>
+                  <p>
+                    <strong>Minimal tonal shift:</strong> Practical tone dominates at 85-98% throughout.
+                    Expressive tones barely register—the profile is intentionally flat.
+                  </p>
+                  <p>
+                    <strong>High-risk is frequent:</strong> Unlike UG/PG where high-risk is exceptional,
+                    enterprise work lives close to risk by default. The overlay appears often.
+                  </p>
+                  <p>
+                    <strong>No international toggle:</strong> International context is assumed baseline
+                    for enterprise audiences. It's built in, not optional.
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        };
+        
+        // Render the component
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<EnterpriseTonalSpectrum />);
+    </script>
+</body>
+</html>
