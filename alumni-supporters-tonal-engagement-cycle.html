@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Alumni and supporters | Tonal engagement cycle | University of Southampton</title>
+  <style>
+    :root {
+      --ink: #00131D;
+      --muted: rgba(0,0,0,0.70);
+      --border: rgba(0,0,0,0.10);
+      --bg: #FAFAFA;
+      --card: #FFFFFF;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+    header { display: grid; gap: 4px; }
+    h1 { font-size: 18px; margin: 0; }
+    p.sub { margin: 0; font-size: 14px; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .panel { padding: 16px; }
+    .pillbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    button.pill {
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.15);
+      background: transparent;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.pill[aria-pressed="true"] {
+      border-width: 2px;
+      background: rgba(0,0,0,0.04);
+    }
+    button.pill .tick { display:none; margin-right:6px; }
+    button.pill.is-selected .tick { display:inline; }
+
+    /* Lightweight tooltip-like message for locked selection */
+    .locktip {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      border-left: 3px solid rgba(0,0,0,0.18);
+      padding-left: 10px;
+    }
+
+    ul { margin: 6px 0 0 18px; }
+    .kicker { font-size: 12px; font-weight: 700; color: rgba(0,0,0,0.78); }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .swatch { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    
+    /* Responsive SVG container */
+    .svg-container {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+    #cycle {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 767px) {
+      .wrap { padding: 16px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      h1 { font-size: 16px; }
+      p.sub { font-size: 13px; }
+      ul { font-size: 12px; }
+      button.pill { font-size: 12px; padding: 6px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Alumni and supporters</h1>
+      <p class="sub">Tonal engagement cycle (click a phase)</p>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="svg-container">
+          <svg id="cycle" viewBox="0 0 520 520" role="img" aria-label="Tonal engagement cycle diagram"></svg>
+        </div>
+        <div class="hint">Tip: Click a segment to lock. Click it again to clear.</div>
+        <div id="lockTip" class="locktip" hidden>Selection locked. Click the selected segment or pill again to clear.</div>
+      </div>
+
+      <div class="card panel" id="panel" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    const phases = [
+      {
+        key: "awareness",
+        label: "Awareness",
+        mindset: "“What’s happening at the university?”",
+        primary: ["Human and grounded"],
+        supporting: ["Engaging and creative", "Boldly optimistic (light)"],
+        intent: ["Warm, informative updates", "Familiar but not nostalgic", "Specific, scannable highlights"],
+        color: "#91DCF4",
+        accent: "#002F4C"
+      },
+      {
+        key: "reconnection",
+        label: "Reconnection",
+        mindset: "“Do I still feel connected?”",
+        primary: ["Human and grounded"],
+        supporting: ["Collectively driven", "Engaging and creative (support)"],
+        intent: ["Belonging through relevance", "Proof over sentiment", "Invite participation gently"],
+        color: "#0265CA",
+        accent: "#002F4C"
+      },
+      {
+        key: "engagement",
+        label: "Active engagement",
+        mindset: "“How can I get involved?”",
+        primary: ["Collectively driven"],
+        supporting: ["Purposefully practical", "Human and grounded (support)"],
+        intent: ["Clear opportunities", "Low-friction next steps", "Respect time and agency"],
+        color: "#005C84",
+        accent: "#002F4C"
+      },
+      {
+        key: "contribution",
+        label: "Contribution",
+        mindset: "“Is this worth my support?”",
+        primary: ["Purposefully practical"],
+        supporting: ["Human and grounded", "Boldly optimistic (evidence-based)"],
+        intent: ["Clarity about impact", "No emotional pressure", "Explain what happens next"],
+        color: "#002F4C",
+        accent: "#495961"
+      }
+    ];
+
+    const svg = document.getElementById("cycle");
+    const panel = document.getElementById("panel");
+    const lockTip = document.getElementById("lockTip");
+
+    const size = 520, cx = 260, cy = 260, padding = 18;
+    const rOuter = size / 2 - padding;
+    const rInner = rOuter * 0.55;
+    const gapDeg = 3;
+    const segDeg = (360 - gapDeg * phases.length) / phases.length;
+
+    // Preview + selection state
+    let hovered = null;   // preview only (hover)
+    let selected = null;  // locked (click)
+
+    // Keep stable DOM references so hover doesn't tear down click targets.
+    const segEls = new Map();   // key -> { path, label }
+    let centerT2 = null;
+    let centerT3 = null;
+
+    function makeEl(name, attrs = {}) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    function polarToCartesian(cx, cy, r, angleDeg) {
+      const rad = (angleDeg - 90) * Math.PI / 180;
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+
+    function arcPath(rO, rI, startAngle, endAngle) {
+      const startOuter = polarToCartesian(cx, cy, rO, endAngle);
+      const endOuter = polarToCartesian(cx, cy, rO, startAngle);
+      const startInner = polarToCartesian(cx, cy, rI, startAngle);
+      const endInner = polarToCartesian(cx, cy, rI, endAngle);
+      const largeArc = (endAngle - startAngle) <= 180 ? "0" : "1";
+      return [
+        `M ${startOuter.x} ${startOuter.y}`,
+        `A ${rO} ${rO} 0 ${largeArc} 0 ${endOuter.x} ${endOuter.y}`,
+        `L ${startInner.x} ${startInner.y}`,
+        `A ${rI} ${rI} 0 ${largeArc} 1 ${endInner.x} ${endInner.y}`,
+        "Z"
+      ].join(" ");
+    }
+
+    function activeKey() {
+      return selected ?? hovered;
+    }
+
+    function activePhase() {
+      const k = activeKey();
+      return phases.find(p => p.key === k) || phases[0];
+    }
+
+    function setSelected(key) {
+      const wasSelected = selected === key;
+      selected = wasSelected ? null : key;
+      // If we locked something, keep hovered aligned to it; if we cleared, clear hover too.
+      hovered = selected ? selected : null;
+      update();
+    }
+
+    function setHovered(keyOrNull) {
+      if (selected) return; // ignore hover while locked
+      hovered = keyOrNull;
+      update();
+    }
+
+    function buildSvgOnce() {
+      // Clear once on init only.
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+      svg.appendChild(makeEl("circle", {
+        cx, cy, r: (rInner * 0.92).toString(),
+        fill: "rgba(0,0,0,0.02)",
+        stroke: "rgba(0,0,0,0.10)"
+      }));
+
+      const t1 = makeEl("text", { x: cx, y: cy - 10, "text-anchor": "middle" });
+      t1.textContent = "Engagement";
+      t1.style.fontSize = "16px";
+      t1.style.fontWeight = "800";
+      t1.style.fill = "#00131D";
+      svg.appendChild(t1);
+
+      centerT2 = makeEl("text", { x: cx, y: cy + 14, "text-anchor": "middle" });
+      centerT2.style.fontSize = "12px";
+      centerT2.style.fill = "rgba(0,0,0,0.70)";
+      svg.appendChild(centerT2);
+
+      centerT3 = makeEl("text", { x: cx, y: cy + 34, "text-anchor": "middle" });
+      centerT3.style.fontSize = "11px";
+      centerT3.style.fill = "rgba(0,0,0,0.60)";
+      svg.appendChild(centerT3);
+
+      phases.forEach((p, idx) => {
+        const start = idx * (segDeg + gapDeg);
+        const end = start + segDeg;
+
+        const path = makeEl("path", {
+          d: arcPath(rOuter, rInner, start, end),
+          fill: p.color,
+          opacity: "0.90",
+          stroke: "rgba(0,0,0,0.08)",
+          "stroke-width": "1"
+        });
+        path.style.cursor = "pointer";
+        path.style.transition = "opacity 140ms ease";
+
+        // Event model: hover previews, click locks. No redraw-teardown here.
+        path.addEventListener("pointerenter", () => setHovered(p.key));
+        path.addEventListener("pointerleave", () => setHovered(null));
+        path.addEventListener("pointerdown", (e) => {
+          // Prevent Opera from starting drag-select on file:// sometimes.
+          e.preventDefault();
+        });
+        path.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setSelected(p.key);
+        });
+
+        svg.appendChild(path);
+
+        const mid = (start + end) / 2;
+        const labelPt = polarToCartesian(cx, cy, (rOuter + rInner) / 2, mid);
+        const label = makeEl("text", {
+          x: labelPt.x,
+          y: labelPt.y,
+          "text-anchor": "middle",
+          "dominant-baseline": "middle"
+        });
+        label.textContent = p.label;
+        label.style.fontSize = "12px";
+        label.style.fontWeight = "700";
+        label.style.fill = (p.key === "contribution" || p.key === "engagement" || p.key === "reconnection") ? "#FAFAFA" : "#00131D";
+        label.style.pointerEvents = "none";
+        svg.appendChild(label);
+
+        segEls.set(p.key, { path, label });
+      });
+
+      // Optional: click outside the segments (on the SVG background) clears selection.
+      svg.addEventListener("click", (e) => {
+        // If they clicked on the empty SVG surface, clear.
+        if (e.target === svg && selected) setSelected(selected);
+      });
+    }
+
+    function renderPanel() {
+      const p = activePhase();
+
+      panel.innerHTML = `
+        <div class="row">
+          <span class="swatch" style="background:${p.color}; outline:2px solid ${p.accent};"></span>
+          <div style="font-size:16px; font-weight:800;">${p.label}</div>
+        </div>
+        <div style="margin-top:10px; font-size:13px; color:rgba(0,0,0,0.85);">
+          <strong>User mindset:</strong> ${p.mindset}
+        </div>
+
+        <div style="margin-top:12px; display:grid; gap:10px;">
+          <div>
+            <div class="kicker">Primary tonal values</div>
+            <ul>${p.primary.map(x => `<li>${x}</li>`).join("")}</ul>
+          </div>
+          <div>
+            <div class="kicker">Supporting tonal values</div>
+            <ul>${p.supporting.map(x => `<li>${x}</li>`).join("")}</ul>
+          </div>
+          <div>
+            <div class="kicker">Tone intent</div>
+            <ul>${p.intent.map(x => `<li>${x}</li>`).join("")}</ul>
+          </div>
+        </div>
+
+        <div class="pillbar">
+          ${phases.map(q => {
+            const isSel = selected === q.key;
+            const isPrev = !selected && hovered === q.key;
+
+            const style = isSel
+              ? `border:2px solid ${q.accent}; background:rgba(0,0,0,0.04);`
+              : isPrev
+                ? `border:2px solid rgba(0,0,0,0.25); background:rgba(0,0,0,0.02);`
+                : ``;
+
+            return `
+              <button
+                type="button"
+                aria-pressed="${isSel}"
+                data-key="${q.key}"
+                class="pill${isSel ? " is-selected" : ""}${isPrev ? " is-preview" : ""}"
+                style="${style}"
+              ><span class="tick" aria-hidden="true">✓</span>${q.label}</button>
+            `;
+          }).join("")}
+        </div>
+
+        ${selected ? `<div class="hint">Selection locked. Click the selected pill or segment again to clear.</div>` : ``}
+      `;
+
+      panel.querySelectorAll("button.pill").forEach(btn => {
+        btn.addEventListener("click", () => setSelected(btn.dataset.key));
+      });
+    }
+
+    function updateVisuals() {
+      const k = activeKey();
+
+      // Center messaging
+      if (centerT2) centerT2.textContent = selected ? "Selection locked" : "Hover or click a phase";
+      if (centerT3) {
+        centerT3.textContent = selected ? "Selection locked (click again to clear)" : "";
+      }
+
+      phases.forEach(p => {
+        const { path, label } = segEls.get(p.key);
+        const isActive = k === p.key;
+        const isMuted = (selected !== null) && !isActive; // dim only when locked
+
+        path.setAttribute("opacity", isMuted ? "0.35" : "0.90");
+        path.setAttribute("stroke", isActive ? p.accent : "rgba(0,0,0,0.08)");
+        path.setAttribute("stroke-width", isActive ? "3" : "1");
+
+        label.style.fontWeight = isActive ? "800" : "700";
+      });
+
+      if (lockTip) lockTip.hidden = !selected;
+    }
+
+    function update() {
+      updateVisuals();
+      renderPanel();
+    }
+
+    // Init
+    buildSvgOnce();
+    update();
+</script>
+</body>
+</html>

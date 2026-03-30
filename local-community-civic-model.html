@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local community | Civic progression model | University of Southampton</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Responsive grid system */
+        .spectrum-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2.5%;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1199px) {
+            .spectrum-grid {
+                gap: 2%;
+            }
+        }
+
+        @media (max-width: 959px) {
+            .spectrum-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+
+        /* Bar styling with responsive heights */
+        .tonal-bar-track {
+            width: 100%;
+            height: 10px;
+            background: #F1F5F9;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .tonal-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 1199px) {
+            .tonal-bar-track {
+                height: 9px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .tonal-bar-track {
+                height: 7px;
+            }
+        }
+
+        /* Column hover effect */
+        .stage-column {
+            background: white;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            padding: 24px;
+            transition: all 0.2s ease;
+        }
+
+        .stage-column:hover {
+            background: #F8FAFC;
+            border-color: #CBD5E1;
+        }
+
+        @media (max-width: 959px) {
+            .stage-column {
+                padding: 20px;
+            }
+        }
+
+        /* Sensitivity block */
+        .sensitivity-block {
+            background: #F8FAFC;
+            border: 2px solid #CBD5E1;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+
+        /* Mobile collapsible */
+        @media (max-width: 767px) {
+            .sensitivity-block.collapsed {
+                display: none;
+            }
+        }
+
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="w-full max-w-7xl mx-auto p-8">
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                Local community civic progression model
+            </h1>
+            <p class="text-gray-600 mb-4">
+                Structured tonal comparison across four civic engagement stages
+            </p>
+            
+            <!-- Controls -->
+            <div class="flex gap-4 mb-4 flex-wrap items-center">
+                <button
+                    id="sensitivity-toggle"
+                    class="px-4 py-2 rounded-md font-medium transition-colors bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                >
+                    Sensitivity override
+                </button>
+                
+                <div class="ml-auto flex gap-2">
+                    <button
+                        id="export-svg"
+                        class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-800 transition-colors text-sm font-medium"
+                    >
+                        Export SVG
+                    </button>
+                    <button
+                        id="export-png"
+                        class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-800 transition-colors text-sm font-medium"
+                    >
+                        Export PNG
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Spectrum visualization (HTML/CSS version for better responsiveness) -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="text-center mb-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">Civic progression model</h2>
+                <p class="text-sm text-gray-600">Tonal weights across four stages of community engagement</p>
+            </div>
+
+            <div class="spectrum-grid" id="spectrum-grid">
+                <!-- Stages will be rendered here by JavaScript -->
+            </div>
+
+            <!-- Weight scale guide -->
+            <p class="text-sm text-gray-600 text-center mt-6">Weight scale: 1 (minimal) → 5 (dominant)</p>
+
+            <!-- Sensitivity indicator -->
+            <div id="sensitivity-indicator" class="sensitivity-block" style="display: none;">
+                <p class="text-sm font-semibold text-slate-700 text-center">
+                    ⚠ Sensitivity mode active: Grounded (5) + Practical (5) prioritised, Creative (1) + Optimistic (1) suppressed
+                </p>
+            </div>
+        </div>
+
+        <!-- SVG version for export -->
+        <svg id="local-community-model-svg" width="1440" height="700" viewBox="0 0 1440 700" style="display: none;">
+        </svg>
+
+        <!-- Responsive design note -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-5">
+            <h3 class="text-sm font-semibold text-blue-900 mb-2">Responsive design</h3>
+            <p class="text-sm text-blue-800 mb-2">
+                This model is designed for optimal clarity at 1200-1440px width and scales fluidly down to 960px 
+                before stacking vertically on smaller screens.
+            </p>
+            <p class="text-sm text-blue-800">
+                <strong>Desktop (≥1200px):</strong> 4-column comparison view · 
+                <strong class="ml-2">Tablet (768-1199px):</strong> Reduced gutters, maintained comparison · 
+                <strong class="ml-2">Mobile (≤767px):</strong> Vertical stack with full-width blocks
+            </p>
+        </div>
+
+        <!-- Key principles grid -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-teal-50 border-l-4 border-teal-600 p-4 rounded">
+                <h3 class="text-sm font-semibold text-teal-900 mb-2">Grounded baseline throughout</h3>
+                <p class="text-sm text-teal-800">
+                    Human and grounded maintains weight 5 (or 4) across all stages, ensuring warmth, 
+                    accessibility, and civic calm remain constant.
+                </p>
+            </div>
+            
+            <div class="bg-emerald-50 border-l-4 border-emerald-600 p-4 rounded">
+                <h3 class="text-sm font-semibold text-emerald-900 mb-2">Collective agency peaks at Partner</h3>
+                <p class="text-sm text-emerald-800">
+                    Collectively driven grows from weight 2 → 4 → 5, showing how shared ownership 
+                    emerges through genuine participation and co-creation.
+                </p>
+            </div>
+            
+            <div class="bg-amber-50 border-l-4 border-amber-600 p-4 rounded">
+                <h3 class="text-sm font-semibold text-amber-900 mb-2">Earned optimism at Impact</h3>
+                <p class="text-sm text-amber-800">
+                    Boldly optimistic stays minimal (1-2) until Impact where it reaches weight 4. 
+                    Hope emerges from sustained collective action, not early promises.
+                </p>
+            </div>
+            
+            <div class="bg-slate-50 border-l-4 border-slate-600 p-4 rounded">
+                <h3 class="text-sm font-semibold text-slate-900 mb-2">Practical clarity for governance</h3>
+                <p class="text-sm text-slate-700">
+                    Purposefully practical remains strong (3-5) throughout, peaking at Partner. 
+                    This reflects the need for clear processes and accountable collaboration.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let showSensitivity = false;
+
+        // Tonal values
+        const tonalValues = [
+            { name: 'Engaging and creative', color: '#EA42CB', shortName: 'Creative' },
+            { name: 'Boldly optimistic', color: '#FCBC00', shortName: 'Optimistic' },
+            { name: 'Human and grounded', color: '#0C838C', shortName: 'Grounded' },
+            { name: 'Collectively driven', color: '#0C8C41', shortName: 'Collective' },
+            { name: 'Purposefully practical', color: '#002F4C', shortName: 'Practical' }
+        ];
+
+        // Stages with weights
+        const stages = [
+            {
+                name: 'Inform',
+                mindset: 'I need to understand what\'s happening in my community',
+                weights: [2, 1, 5, 2, 4]
+            },
+            {
+                name: 'Invite',
+                mindset: 'I want to be part of the conversation',
+                weights: [3, 2, 5, 4, 3]
+            },
+            {
+                name: 'Partner',
+                mindset: 'I\'m ready to co-create solutions together',
+                weights: [2, 3, 4, 5, 5]
+            },
+            {
+                name: 'Impact',
+                mindset: 'We\'re creating sustained change',
+                weights: [2, 4, 4, 4, 4]
+            }
+        ];
+
+        const sensitivityWeights = [1, 1, 5, 3, 5];
+
+        const getWeights = (stageIndex) => {
+            if (showSensitivity) return sensitivityWeights;
+            return stages[stageIndex].weights;
+        };
+
+        const weightToWidth = (weight) => weight * 20;
+
+        // Render HTML spectrum
+        const renderHTMLSpectrum = () => {
+            const grid = document.getElementById('spectrum-grid');
+            grid.innerHTML = '';
+
+            stages.forEach((stage, stageIndex) => {
+                const weights = getWeights(stageIndex);
+                
+                const column = document.createElement('div');
+                column.className = 'stage-column';
+                
+                let html = `
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 text-center">${stage.name}</h3>
+                    <p class="text-sm text-gray-600 italic text-center mb-6" style="min-height: 40px;">${stage.mindset}</p>
+                `;
+
+                tonalValues.forEach((tone, toneIndex) => {
+                    const weight = weights[toneIndex];
+                    const barWidth = weightToWidth(weight);
+                    
+                    html += `
+                        <div class="mb-5">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-medium text-gray-700">${tone.name}</span>
+                                <span class="text-xs font-semibold text-gray-600">${weight}</span>
+                            </div>
+                            <div class="tonal-bar-track">
+                                <div class="tonal-bar-fill" style="width: ${barWidth}%; background-color: ${tone.color}; opacity: 0.8;"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                column.innerHTML = html;
+                grid.appendChild(column);
+            });
+
+            // Show/hide sensitivity indicator
+            const indicator = document.getElementById('sensitivity-indicator');
+            indicator.style.display = showSensitivity ? 'block' : 'none';
+        };
+
+        // Render SVG for export
+        const renderSVGSpectrum = () => {
+            const svg = document.getElementById('local-community-model-svg');
+            svg.innerHTML = '';
+
+            // Title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', '720');
+            title.setAttribute('y', '35');
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-size', '22');
+            title.setAttribute('font-weight', '600');
+            title.setAttribute('fill', '#1E293B');
+            title.textContent = 'Civic progression model';
+            svg.appendChild(title);
+
+            const subtitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            subtitle.setAttribute('x', '720');
+            subtitle.setAttribute('y', '58');
+            subtitle.setAttribute('text-anchor', 'middle');
+            subtitle.setAttribute('font-size', '13');
+            subtitle.setAttribute('fill', '#64748B');
+            subtitle.textContent = 'Tonal weights across four stages of community engagement';
+            svg.appendChild(subtitle);
+
+            // Columns
+            stages.forEach((stage, stageIndex) => {
+                const colWidth = 320;
+                const colX = 80 + (stageIndex * 340);
+                const weights = getWeights(stageIndex);
+
+                // Background
+                const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                bg.setAttribute('x', colX);
+                bg.setAttribute('y', '90');
+                bg.setAttribute('width', colWidth);
+                bg.setAttribute('height', '520');
+                bg.setAttribute('fill', 'white');
+                bg.setAttribute('stroke', '#E2E8F0');
+                bg.setAttribute('rx', '4');
+                svg.appendChild(bg);
+
+                // Header
+                const header = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                header.setAttribute('x', colX + colWidth / 2);
+                header.setAttribute('y', '120');
+                header.setAttribute('text-anchor', 'middle');
+                header.setAttribute('font-size', '18');
+                header.setAttribute('font-weight', '600');
+                header.setAttribute('fill', '#1E293B');
+                header.textContent = stage.name;
+                svg.appendChild(header);
+
+                // Mindset (split into multiple lines if needed)
+                const mindsetWords = stage.mindset.split(' ');
+                const lines = [];
+                let currentLine = '';
+                
+                mindsetWords.forEach(word => {
+                    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+                    if (testLine.length > 35) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+                if (currentLine) lines.push(currentLine);
+
+                lines.forEach((line, i) => {
+                    const mindsetText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    mindsetText.setAttribute('x', colX + colWidth / 2);
+                    mindsetText.setAttribute('y', 145 + (i * 16));
+                    mindsetText.setAttribute('text-anchor', 'middle');
+                    mindsetText.setAttribute('font-size', '13');
+                    mindsetText.setAttribute('fill', '#64748B');
+                    mindsetText.setAttribute('font-style', 'italic');
+                    mindsetText.textContent = line;
+                    svg.appendChild(mindsetText);
+                });
+
+                // Bars
+                tonalValues.forEach((tone, toneIndex) => {
+                    const barY = 220 + (toneIndex * 70);
+                    const weight = weights[toneIndex];
+                    const barWidth = (colWidth - 40) * (weight / 5);
+
+                    // Label
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', colX + 20);
+                    label.setAttribute('y', barY - 8);
+                    label.setAttribute('font-size', '12');
+                    label.setAttribute('font-weight', '500');
+                    label.setAttribute('fill', '#475569');
+                    label.textContent = tone.name;
+                    svg.appendChild(label);
+
+                    // Track
+                    const track = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    track.setAttribute('x', colX + 20);
+                    track.setAttribute('y', barY);
+                    track.setAttribute('width', colWidth - 40);
+                    track.setAttribute('height', '10');
+                    track.setAttribute('fill', '#F1F5F9');
+                    track.setAttribute('rx', '2');
+                    svg.appendChild(track);
+
+                    // Fill
+                    const fill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    fill.setAttribute('x', colX + 20);
+                    fill.setAttribute('y', barY);
+                    fill.setAttribute('width', barWidth);
+                    fill.setAttribute('height', '10');
+                    fill.setAttribute('fill', tone.color);
+                    fill.setAttribute('opacity', '0.8');
+                    fill.setAttribute('rx', '2');
+                    svg.appendChild(fill);
+
+                    // Weight
+                    const weightText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    weightText.setAttribute('x', colX + colWidth - 20);
+                    weightText.setAttribute('y', barY + 8);
+                    weightText.setAttribute('text-anchor', 'end');
+                    weightText.setAttribute('font-size', '11');
+                    weightText.setAttribute('font-weight', '600');
+                    weightText.setAttribute('fill', '#64748B');
+                    weightText.textContent = weight;
+                    svg.appendChild(weightText);
+                });
+            });
+
+            // Weight scale guide (below all columns)
+            const guide = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            guide.setAttribute('x', '720');
+            guide.setAttribute('y', '630');
+            guide.setAttribute('text-anchor', 'middle');
+            guide.setAttribute('font-size', '11');
+            guide.setAttribute('fill', '#64748B');
+            guide.textContent = 'Weight scale: 1 (minimal) → 5 (dominant)';
+            svg.appendChild(guide);
+
+            // Sensitivity indicator
+            if (showSensitivity) {
+                const sensBox = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                sensBox.setAttribute('x', '80');
+                sensBox.setAttribute('y', '655');
+                sensBox.setAttribute('width', '1280');
+                sensBox.setAttribute('height', '50');
+                sensBox.setAttribute('fill', '#F8FAFC');
+                sensBox.setAttribute('stroke', '#CBD5E1');
+                sensBox.setAttribute('stroke-width', '2');
+                sensBox.setAttribute('rx', '4');
+                svg.appendChild(sensBox);
+
+                const sensText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                sensText.setAttribute('x', '720');
+                sensText.setAttribute('y', '680');
+                sensText.setAttribute('text-anchor', 'middle');
+                sensText.setAttribute('font-size', '12');
+                sensText.setAttribute('font-weight', '600');
+                sensText.setAttribute('fill', '#475569');
+                sensText.textContent = '⚠ Sensitivity mode active: Grounded (5) + Practical (5) prioritised, Creative (1) + Optimistic (1) suppressed';
+                svg.appendChild(sensText);
+            }
+        };
+
+        const render = () => {
+            renderHTMLSpectrum();
+            renderSVGSpectrum();
+        };
+
+        // Event handlers
+        document.getElementById('sensitivity-toggle').addEventListener('click', () => {
+            showSensitivity = !showSensitivity;
+            const btn = document.getElementById('sensitivity-toggle');
+            if (showSensitivity) {
+                btn.classList.remove('bg-white', 'text-gray-700', 'border', 'border-gray-300', 'hover:bg-gray-50');
+                btn.classList.add('bg-slate-600', 'text-white', 'hover:bg-slate-700');
+                btn.textContent = '✓ Sensitivity override';
+            } else {
+                btn.classList.remove('bg-slate-600', 'text-white', 'hover:bg-slate-700');
+                btn.classList.add('bg-white', 'text-gray-700', 'border', 'border-gray-300', 'hover:bg-gray-50');
+                btn.textContent = 'Sensitivity override';
+            }
+            render();
+        });
+
+        document.getElementById('export-svg').addEventListener('click', () => {
+            const svgElement = document.getElementById('local-community-model-svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'local-community-model.svg';
+            link.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('export-png').addEventListener('click', () => {
+            const svgElement = document.getElementById('local-community-model-svg');
+            const canvas = document.createElement('canvas');
+            canvas.width = 1440;
+            canvas.height = 700;
+            const ctx = canvas.getContext('2d');
+            
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const img = new Image();
+            
+            img.onload = () => {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'local-community-model.png';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                });
+            };
+            
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+        });
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
