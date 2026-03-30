@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postgraduate audience | Digital tonal spectrum | University of Southampton</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #F5F5F5;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        #root {
+            width: 100%;
+            min-height: 100vh;
+        }
+        /* Ensure SVG scales properly */
+        .spectrum-svg-container {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* Touch-friendly interactive elements */
+        @media (hover: none) and (pointer: coarse) {
+            .interactive-circle {
+                r: 8 !important;
+            }
+        }
+        /* Font scaling for narrower viewports - maintains legibility without over-optimizing */
+        @media (max-width: 768px) {
+            #pg-spectrum-svg text {
+                font-size: 140%;
+            }
+            #pg-spectrum-svg .stage-label {
+                font-size: 160%;
+            }
+            #pg-spectrum-svg .stage-emotional-cue {
+                font-size: 140%;
+            }
+        }
+        @media (max-width: 480px) {
+            #pg-spectrum-svg text {
+                font-size: 180%;
+            }
+            #pg-spectrum-svg .stage-label {
+                font-size: 200%;
+            }
+            #pg-spectrum-svg .stage-emotional-cue {
+                font-size: 180%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+        
+        const PGTonalSpectrum = () => {
+          const [activeStage, setActiveStage] = useState(null);
+          const [activeTone, setActiveTone] = useState(null);
+          const [overlays, setOverlays] = useState({
+            international: false,
+            highRisk: false,
+            professional: false
+          });
+
+          // Tonal values with colors (same as UG)
+          const tonalValues = [
+            { name: 'Engaging and creative', color: '#EA42CB', shortName: 'Creative' },
+            { name: 'Boldly optimistic', color: '#FCBC00', shortName: 'Optimistic' },
+            { name: 'Human and grounded', color: '#0C838C', shortName: 'Grounded' },
+            { name: 'Collectively driven', color: '#0C8C41', shortName: 'Collective' },
+            { name: 'Purposefully practical', color: '#002F4C', shortName: 'Practical' }
+          ];
+
+          // Journey stages with PG-specific band behaviors
+          const stages = [
+            {
+              name: 'Orientation',
+              shortName: 'Orient',
+              emotionalCue: 'Intent-driven',
+              bands: [25, 30, 35, 50, 85]
+            },
+            {
+              name: 'Exploration',
+              shortName: 'Explore',
+              emotionalCue: 'Goal-focused',
+              bands: [20, 25, 35, 60, 88]
+            },
+            {
+              name: 'Sense-making',
+              shortName: 'Sense',
+              emotionalCue: 'Assessing fit',
+              bands: [18, 22, 40, 65, 90]
+            },
+            {
+              name: 'Evaluation',
+              shortName: 'Evaluate',
+              emotionalCue: 'Risk-aware',
+              bands: [15, 20, 45, 68, 95]
+            },
+            {
+              name: 'Decision',
+              shortName: 'Decide',
+              emotionalCue: 'Credibility check',
+              bands: [12, 18, 55, 65, 92]
+            },
+            {
+              name: 'Commitment',
+              shortName: 'Commit',
+              emotionalCue: 'Confidence, not relief',
+              bands: [10, 15, 50, 60, 90]
+            },
+            {
+              name: 'Transition',
+              shortName: 'Transit',
+              emotionalCue: 'Task-focused',
+              bands: [5, 10, 35, 30, 98]
+            }
+          ];
+
+          // Apply overlay effects to band values
+          const getAdjustedBands = (stageIndex, bands) => {
+            const adjusted = [...bands];
+            
+            if (overlays.highRisk && stageIndex >= 3) {
+              adjusted[0] = Math.min(adjusted[0], 8);
+              adjusted[1] = Math.min(adjusted[1], 12);
+              adjusted[2] = Math.min(adjusted[2], 35);
+              adjusted[3] = Math.min(adjusted[3], 30);
+            }
+            
+            if (overlays.international) {
+              adjusted[0] *= 0.8;
+              adjusted[1] *= 0.8;
+            }
+            
+            if (overlays.professional && stageIndex >= 1 && stageIndex <= 4) {
+              adjusted[3] = Math.min(100, adjusted[3] * 1.1);
+              adjusted[4] = Math.min(100, adjusted[4] * 1.05);
+            }
+            
+            return adjusted;
+          };
+
+          // SVG dimensions (these remain constant for calculations, viewBox handles scaling)
+          const width = 1400;
+          const height = 700;
+          const margin = { top: 80, right: 200, bottom: 80, left: 200 };
+          const chartWidth = width - margin.left - margin.right;
+          const chartHeight = height - margin.top - margin.bottom;
+          
+          const stageWidth = chartWidth / stages.length;
+
+          const createBandPath = (toneIndex) => {
+            const points = stages.map((stage, i) => {
+              const adjustedBands = getAdjustedBands(i, stage.bands);
+              const x = margin.left + (i * stageWidth) + (stageWidth / 2);
+              const y = margin.top + chartHeight - (adjustedBands[toneIndex] / 100 * chartHeight);
+              return { x, y, value: adjustedBands[toneIndex] };
+            });
+
+            let path = `M ${points[0].x} ${points[0].y}`;
+            
+            for (let i = 1; i < points.length; i++) {
+              const prev = points[i - 1];
+              const curr = points[i];
+              const cpX = (prev.x + curr.x) / 2;
+              
+              path += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
+            }
+            
+            return { path, points };
+          };
+
+          const exportToSVG = () => {
+            const svgElement = document.getElementById('pg-spectrum-svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'pg-tonal-spectrum.svg';
+            link.click();
+            URL.revokeObjectURL(url);
+          };
+
+          const exportToPNG = () => {
+            const svgElement = document.getElementById('pg-spectrum-svg');
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            
+            img.onload = () => {
+              ctx.fillStyle = 'white';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              
+              canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'pg-tonal-spectrum.png';
+                link.click();
+                URL.revokeObjectURL(url);
+              });
+            };
+            
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const svgUrl = URL.createObjectURL(svgBlob);
+            img.src = svgUrl;
+          };
+
+          return (
+            <div className="w-full mx-auto p-4 sm:p-6 lg:p-8 bg-gray-50">
+              <div className="mb-4 sm:mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  Postgraduate tonal spectrum
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
+                  Flatter profile with practical dominance from the start
+                </p>
+                
+                {/* Export buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
+                  <button
+                    onClick={exportToSVG}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                  >
+                    Export SVG
+                  </button>
+                  <button
+                    onClick={exportToPNG}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+                  >
+                    Export PNG (2x)
+                  </button>
+                </div>
+
+                {/* Overlay toggles */}
+                <div className="space-y-2">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Audience overlays:</p>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={overlays.international}
+                        onChange={(e) => setOverlays(prev => ({ ...prev, international: e.target.checked }))}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-gray-700">International students</span>
+                    </label>
+                    
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={overlays.highRisk}
+                        onChange={(e) => setOverlays(prev => ({ ...prev, highRisk: e.target.checked }))}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-gray-700">High-risk content</span>
+                    </label>
+                    
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={overlays.professional}
+                        onChange={(e) => setOverlays(prev => ({ ...prev, professional: e.target.checked }))}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-gray-700">Professional development</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* SVG Chart with responsive viewBox */}
+              <svg
+                id="pg-spectrum-svg"
+                viewBox={`0 0 ${width} ${height}`}
+                className="spectrum-svg-container w-full h-auto bg-white rounded-lg shadow-lg"
+                preserveAspectRatio="xMidYMid meet"
+                onPointerLeave={() => { setActiveStage(null); setActiveTone(null); }}
+              >
+                <defs>
+                  {tonalValues.map((tone, i) => (
+                    <linearGradient
+                      key={`gradient-${i}`}
+                      id={`gradient-${i}`}
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stopColor={tone.color} stopOpacity="0.6" />
+                      <stop offset="100%" stopColor={tone.color} stopOpacity="0.1" />
+                    </linearGradient>
+                  ))}
+                </defs>
+
+                {/* Y-axis labels with colored underlines */}
+                {/* Y-axis: band strength (%) */}
+                {(() => {
+                  const ticks = [0, 20, 40, 60, 80, 100];
+                  return (
+                    <g>
+                      {/* Axis line */}
+                      <line
+                        x1={margin.left}
+                        y1={margin.top}
+                        x2={margin.left}
+                        y2={margin.top + chartHeight}
+                        stroke="#E1E8EC"
+                        strokeWidth="2"
+                      />
+
+                      {/* Grid lines + tick labels */}
+                      {ticks.map((t) => {
+                        const y = margin.top + chartHeight - (t / 100) * chartHeight;
+                        return (
+                          <g key={`y-tick-${t}`}>
+                            <line
+                              x1={margin.left}
+                              y1={y}
+                              x2={margin.left + chartWidth}
+                              y2={y}
+                              stroke="#E1E8EC"
+                              strokeWidth="1"
+                              opacity="0.7"
+                            />
+                            <line
+                              x1={margin.left - 6}
+                              y1={y}
+                              x2={margin.left}
+                              y2={y}
+                              stroke="#A7B4BC"
+                              strokeWidth="2"
+                            />
+                            <text
+                              x={margin.left - 12}
+                              y={y + 4}
+                              textAnchor="end"
+                              fontSize="12"
+                              fill="#495961"
+                            >
+                              {t}%
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      <text
+                        x={margin.left - 12}
+                        y={margin.top - 16}
+                        textAnchor="end"
+                        fontSize="12"
+                        fill="#00131D"
+                        fontWeight="600"
+                      >
+                        Band strength
+                      </text>
+                    </g>
+                  );
+                })()}{/* Stage labels and grid lines */}
+                {stages.map((stage, i) => (
+                  <g key={`x-label-${i}`}>
+                    <text
+                      className="stage-label"
+                      x={margin.left + (i * stageWidth) + (stageWidth / 2)}
+                      y={height - margin.bottom + 25}
+                      textAnchor="middle"
+                      fontSize="13"
+                      fill="#00131D"
+                      fontWeight="600"
+                    >
+                      {stage.name}
+                    </text>
+                    <text
+                      className="stage-emotional-cue"
+                      x={margin.left + (i * stageWidth) + (stageWidth / 2)}
+                      y={height - margin.bottom + 45}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="#495961"
+                      fontStyle="italic"
+                    >
+                      {stage.emotionalCue}
+                    </text>
+                    
+                    <line
+                      x1={margin.left + (i * stageWidth) + (stageWidth / 2)}
+                      y1={margin.top}
+                      x2={margin.left + (i * stageWidth) + (stageWidth / 2)}
+                      y2={margin.top + chartHeight}
+                      stroke="#E1E8EC"
+                      strokeWidth="1"
+                      strokeDasharray="4 4"
+                      opacity="0.5"
+                    />
+                  </g>
+                ))}
+
+                {/* Tonal bands */}
+                {[...tonalValues].reverse().map((tone, reverseIndex) => {
+                  const toneIndex = tonalValues.length - 1 - reverseIndex;
+                  const { path, points } = createBandPath(toneIndex);
+                  
+                  return (
+                    <g key={`band-${toneIndex}`}>
+                      <path
+                        d={`${path} L ${margin.left + chartWidth} ${margin.top + chartHeight} L ${margin.left} ${margin.top + chartHeight} Z`}
+                        fill={`url(#gradient-${toneIndex})`}
+                        opacity={0.7}
+                        className="transition-all duration-300"
+                      />
+                      
+                      <path
+                        d={path}
+                        fill="none"
+                        stroke={tone.color}
+                        strokeWidth="2.5"
+                        className="transition-all duration-300"
+                      />
+                      
+                      {points.map((point, i) => (
+                        <circle
+                          key={`point-${toneIndex}-${i}`}
+                          className="interactive-circle cursor-pointer transition-all duration-200"
+                          cx={point.x}
+                          cy={point.y}
+                          r={activeStage === i && activeTone === toneIndex ? "8" : "5"}
+                          fill={tone.color}
+                          stroke="white"
+                          strokeWidth="2"
+                          opacity={activeStage === i && activeTone === toneIndex ? 1 : 0.8}
+                          pointerEvents="none"
+/>
+                      ))}
+                    </g>
+                  );
+                })}
+
+                {/* High-risk overlay */}
+                {overlays.highRisk && (
+                  <>
+                    <rect
+                      x={margin.left + (3 * stageWidth)}
+                      y={margin.top}
+                      width={4 * stageWidth}
+                      height={chartHeight}
+                      fill="#ECE6E1"
+                      opacity="0.3"
+                    />
+                    <text
+                      x={margin.left + (5 * stageWidth)}
+                      y={margin.top + 20}
+                      textAnchor="middle"
+                      fontSize="11"
+                      fill="#495961"
+                      fontWeight="600"
+                    >
+                      High-risk content zone
+                    </text>
+                  </>
+                )}
+
+                {/* International overlay indicator */}
+                {overlays.international && (
+                  <text
+                    x={width - margin.right + 20}
+                    y={margin.top + 30}
+                    fontSize="11"
+                    fill="#495961"
+                    fontStyle="italic"
+                  >
+                    ⚠ Plain English enforced
+                  </text>
+                )}
+
+                {/* Professional overlay */}
+                {overlays.professional && (
+                  <>
+                    <text
+                      x={width - margin.right + 20}
+                      y={margin.top + 55}
+                      fontSize="11"
+                      fill="#495961"
+                      fontWeight="600"
+                    >
+                      Professional credibility prioritised
+                    </text>
+                    <text
+                      x={width - margin.right + 20}
+                      y={margin.top + 72}
+                      fontSize="10"
+                      fill="#495961"
+                      fontStyle="italic"
+                    >
+                      Evidence only
+                    </text>
+                  </>
+                )}
+
+                
+                {/* Hit targets layer (interactive, drawn on top) */}
+                <g>
+                  {(() => {
+                    const counts = new Map();
+                    const seen = new Map();
+
+                    // Count near-identical points (rounded) so we can jitter hit targets when overlaps occur.
+                    tonalValues.forEach((_, toneIndex) => {
+                      const { points } = createBandPath(toneIndex);
+                      points.forEach((p) => {
+                        const k = `${Math.round(p.x)}|${Math.round(p.y)}`;
+                        counts.set(k, (counts.get(k) || 0) + 1);
+                      });
+                    });
+
+                    const hits = [];
+                    tonalValues.forEach((tone, toneIndex) => {
+                      const { points } = createBandPath(toneIndex);
+                      points.forEach((p, stageIndex) => {
+                        const k = `${Math.round(p.x)}|${Math.round(p.y)}`;
+                        const n = counts.get(k) || 1;
+                        const idx = seen.get(k) || 0;
+                        seen.set(k, idx + 1);
+
+                        // Jitter only when overlaps exist, so each point remains individually targetable.
+                        const jitter = n > 1 ? (idx - (n - 1) / 2) * 10 : 0;
+
+                        hits.push(
+                          <circle
+                            key={`hit-${toneIndex}-${stageIndex}`}
+                            cx={p.x + jitter}
+                            cy={p.y}
+                            r="12"
+                            fill="transparent"
+                            pointerEvents="all"
+                            className="cursor-pointer"
+                            onPointerEnter={() => { setActiveStage(stageIndex); setActiveTone(toneIndex); }}
+                            onPointerDown={() => { setActiveStage(stageIndex); setActiveTone(toneIndex); }}
+                          />
+                        );
+                      });
+                    });
+
+                    return hits;
+                  })()}
+                </g>
+
+{/* Legend */}
+                {(() => {
+                  const legendX = width - margin.right + 20;
+                  const legendY = margin.top + 110;
+
+                  const title = "Tonal values";
+                  const swatchW = 20;
+                  const swatchH = 12;
+                  const textX = 28;
+
+                  // Wrapping & spacing (SVG <text> does not wrap automatically)
+                  const maxChars = 24;   // wrap threshold (character-based)
+                  const lineH = 14;      // per-line spacing
+                  const itemGap = 10;    // gap between items
+                  const titleGap = 25;   // gap after title
+                  const pad = 10;
+                  const panelW = 180;    // fixed width; height flexes
+
+                  const wrapLines = (s) => {
+                    const words = String(s).split(/\s+/).filter(Boolean);
+                    const lines = [];
+                    let cur = "";
+                    for (const w of words) {
+                      const next = cur ? `${cur} ${w}` : w;
+                      if (next.length <= maxChars) cur = next;
+                      else {
+                        if (cur) lines.push(cur);
+                        cur = w;
+                      }
+                    }
+                    if (cur) lines.push(cur);
+                    return lines.length ? lines : [String(s)];
+                  };
+
+                  const items = tonalValues.map((tone) => ({
+                    tone,
+                    lines: wrapLines(tone.name),
+                  }));
+
+                  // Dynamic panel height
+                  const itemsHeight = items.reduce((acc, it) => acc + (it.lines.length * lineH) + itemGap, 0);
+                  const panelH = pad + 12 + titleGap + itemsHeight + pad;
+
+                  let yCursor = 0;
+
+                  return (
+                    <g transform={`translate(${legendX}, ${legendY})`}>
+                      <rect
+                        x={-pad}
+                        y={-pad-20}
+                        width={panelW}
+                        height={panelH}
+                        fill="white"
+                        stroke="#E1E8EC"
+                        strokeWidth="2"
+                        rx="6"
+                      />
+                      <text fontSize="12" fontWeight="600" fill="#00131D" y="0">
+                        {title}
+                      </text>
+
+                      {items.map((it, i) => {
+                        const yTop = titleGap + yCursor;
+                        const blockH = it.lines.length * lineH;
+                        yCursor += blockH + itemGap;
+
+                        return (
+                          <g key={`legend-${i}`} transform={`translate(0, ${yTop})`}>
+                            <rect x="0" y="-10" width={swatchW} height={swatchH} fill={it.tone.color} opacity="0.7" />
+                            <text x={textX} y="0" fontSize="11" fill="#495961">
+                              {it.lines.map((ln, li) => (
+                                <tspan key={`ln-${li}`} x={textX} dy={li === 0 ? 0 : lineH}>
+                                  {ln}
+                                </tspan>
+                              ))}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </g>
+                  );
+                })()}{/* Interactive detail panel */}
+                {activeStage !== null && (
+                  <g transform={`translate(${width - margin.right + 20}, ${margin.top + 290})`}>
+                    <rect
+                      x="-10"
+                      y="-10"
+                      width="180"
+                      height="175"
+                      fill="white"
+                      stroke="#E1E8EC"
+                      strokeWidth="2"
+                      rx="4"
+                    />
+                    <text fontSize="13" fontWeight="600" fill="#00131D" y="10">
+                      {stages[activeStage].name}
+                    </text>
+                    <text fontSize="11" fill="#495961" y="30" fontStyle="italic">
+                      {stages[activeStage].emotionalCue}
+                    </text>
+                    
+                    
+                    {activeTone !== null && (
+                      <text fontSize="11" fill="#495961" y="45">
+                        Selected point: <tspan fontWeight="600" fill="#00131D">{tonalValues[activeTone].shortName}</tspan>{" "}
+                        ({Math.round(getAdjustedBands(activeStage, stages[activeStage].bands)[activeTone])}%)
+                      </text>
+                    )}
+<text fontSize="11" fontWeight="600" fill="#00131D" y="70">
+                      Band strengths:
+                    </text>
+                    {tonalValues.map((tone, i) => {
+                      const adjustedBands = getAdjustedBands(activeStage, stages[activeStage].bands);
+                      return (
+                        <g key={`detail-${i}`} transform={`translate(0, ${85 + (i * 15)})`}>
+                          <rect x="0" y="-8" width="8" height="8" fill={tone.color} />
+                          <text x="15" y="0" fontSize="10" fill="#495961">
+                            {tone.shortName}: {Math.round(adjustedBands[i])}%
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                )}
+              </svg>
+
+              {/* Key principle callout */}
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 border-l-4 border-green-600 rounded">
+                <p className="text-xs sm:text-sm text-gray-800">
+                  <strong>Key contrast with UG:</strong> PG students demonstrate far less tonal movement. 
+                  Practical dominance is consistent from the start. Confidence replaces emotional reassurance—evidence beats comfort.
+                </p>
+              </div>
+            </div>
+          );
+        };
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<PGTonalSpectrum />);
+    </script>
+</body>
+</html>
